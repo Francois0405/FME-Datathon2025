@@ -48,4 +48,48 @@ def ModelTrainHalf():
 
     print(f"Entrenamiento con {len(df_train)} filas, test con {len(df_test)} filas")
     print("Modelo entrenado y guardado.")
-ModelTrainHalf()#90,12%
+
+def ModelTrainFull():
+    import pandas as pd
+    from sklearn.ensemble import RandomForestClassifier
+    import joblib
+
+    # 1. Cargar CSV
+    df = pd.read_csv("dataset.csv", sep=";")
+
+    # Mezclar dataset para evitar patrones de orden
+    df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+    # Comprobar balance del target
+    print("Distribución del target:\n", df["target_variable"].value_counts(normalize=True))
+
+    # Variables objetivo
+    X = df.drop("target_variable", axis=1)
+    y = df["target_variable"]
+
+    # Convertir a dummies
+    X = pd.get_dummies(X)
+
+    # 2. Entrenar modelo con TODO el dataset
+    model = RandomForestClassifier(
+        n_estimators=300,
+        max_depth=None,
+        class_weight="balanced",
+        random_state=42,
+        n_jobs=-1  # usa todos los núcleos CPU
+    )
+
+    model.fit(X, y)
+
+    # Guardar modelo
+    joblib.dump(model, "modelo_entrenado.pkl")
+
+    print(f"Entrenamiento completo con {len(df)} filas")
+    print("Modelo entrenado y guardado como 'modelo_entrenado.pkl'")
+
+
+
+
+# Ejecutar
+ModelTrainFull()
+#ModelTrainHalf()#90,12%
