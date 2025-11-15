@@ -36,3 +36,5 @@ def testModelHalf():
     print(f"Porcentaje de acierto: {acierto / total * 100:.2f}%")
 
 testModelHalf()
+import os
+os.remove('modelo_entrenado.pkl')
