@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 import random
 
-n_registros = 100000
+n_registros = 35899
 
 def generar_datos_similares_realistas(n_registros):
     """

@@ -2,3 +2,5 @@ pip install sklearn
 pip install scikit-learn
 pip install pandas
 pip install matplotlib
+pip install imblearn
+pip install imbalanced-learn

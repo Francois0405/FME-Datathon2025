@@ -74,6 +74,6 @@ def testModelFull(file):
 #testModelHalf("dataset")
 #testModelHalf("dataset_realista_20251115_215426")
 #testModelHalf("dataset_correlacionado_20251115_190943")
-testModelFull('dataset_realista_20251115_221130')
+testModelFull('dataset')
 #import os
 #os.remove('modelo_entrenado.pkl')

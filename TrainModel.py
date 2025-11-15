@@ -91,5 +91,5 @@ def ModelTrainFull():
 
 
 # Ejecutar
-ModelTrainFull()
-#ModelTrainHalf()#90,12%
+#ModelTrainFull()
+ModelTrainHalf()#90,12%
