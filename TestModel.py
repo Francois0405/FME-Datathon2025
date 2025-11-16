@@ -1,6 +1,7 @@
-def testModelHalf_fixed(file):
+def testModelHalf(file):
     import joblib, pandas as pd, numpy as np
     from sklearn.metrics import roc_auc_score, classification_report, confusion_matrix
+    from sklearn.inspection import permutation_importance
 
     model = joblib.load("modelo_entrenado.pkl")
     df = pd.read_csv(file, sep=";")
@@ -17,9 +18,24 @@ def testModelHalf_fixed(file):
     probs = model.predict_proba(X_test)[:,1]
     preds = (probs >= 0.5).astype(int)
 
+    importance = model.feature_importances_
+    feat_importance = pd.DataFrame({
+        "feature": model.feature_names_in_,
+        "importance": importance
+    }).sort_values("importance", ascending=False)
+        
+    result = permutation_importance(model, X, y, n_repeats=20, scoring='roc_auc')
+    perm_df = pd.DataFrame({
+        "feature": X.columns,
+        "importance_mean": result.importances_mean,
+        "importance_std": result.importances_std
+    }).sort_values("importance_mean", ascending=False)
+
     print("ROC AUC:", roc_auc_score(y_real, probs))
     print("Classification report:\n", classification_report(y_real, preds, zero_division=0))
     print("Confusion matrix:\n", confusion_matrix(y_real, preds))
+    print(feat_importance.head(20))
+    print(perm_df.head(20))
 
 def testModelFull(file):
     import joblib
@@ -60,6 +76,6 @@ def testModelFull(file):
 #testModelHalf("dataset_realista_20251115_215426")
 #testModelHalf("dataset_correlacionado_20251115_190943")
 #testModelFull('dataset')
-testModelFull('dataset_rapido_20251116_110827')
+testModelHalf()
 #import os
 #os.remove('modelo_entrenado.pkl')
