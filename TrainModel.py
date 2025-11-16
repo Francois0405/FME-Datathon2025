@@ -1,10 +1,10 @@
-def ModelTrainHalf():
+def ModelTrainHalf(dataset_path="dataset.csv"):
     import pandas as pd
     from sklearn.ensemble import RandomForestClassifier
     import joblib
 
     # 1. Cargar CSV
-    df = pd.read_csv("dataset.csv", sep=";")
+    df = pd.read_csv(dataset_path, sep=";")
 
     # Mezclar dataset para evitar ordenar por fecha/cliente
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
@@ -49,13 +49,13 @@ def ModelTrainHalf():
     print(f"Entrenamiento con {len(df_train)} filas, test con {len(df_test)} filas")
     print("Modelo entrenado y guardado.")
 
-def ModelTrainFull():
+def ModelTrainFull(dataset_path="dataset.csv"):
     import pandas as pd
     from sklearn.ensemble import RandomForestClassifier
     import joblib
 
     # 1. Cargar CSV
-    df = pd.read_csv("dataset.csv", sep=";")
+    df = pd.read_csv(dataset_path, sep=";")
 
     # Mezclar dataset para evitar patrones de orden
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)

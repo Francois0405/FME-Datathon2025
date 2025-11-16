@@ -3,13 +3,13 @@ import numpy as np
 from datetime import datetime
 import random
 
-n_registros = 35899
+n_registros = 50000
 
 def generar_datos_similares_realistas(n_registros):
     """
     Genera datos similares al dataset proporcionado con valores REALES dentro de los rangos observados
     """
-    np.random.seed(3929)  # Para reproducibilidad
+    np.random.seed(42)  # Para reproducibilidad
     
     # Rangos observados en el dataset original
     rangos = {
