@@ -168,5 +168,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Readme written with help of Artificial Intelligence**
+Readme written with help of Artificial Intelligence
+
 **Questions or issues?** Open an *issue* in the repository for support.
