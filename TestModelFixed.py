@@ -14,11 +14,11 @@ import seaborn as sns
 # 1. ENTRENAMIENTO MEJORADO DEL MODELO
 # =============================================================================
 
-def ModelTrainHalf(dataset_path="dataset.csv"):
+def ModelTrainHalf(train_path="dataset.csv"):
     """Entrenamiento mejorado con feature engineering y balanceo"""
     
     # 1. Cargar y preparar datos
-    df = pd.read_csv(dataset_path, sep=";")
+    df = pd.read_csv(train_path, sep=";")
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
     
     print("Distribución inicial del target:")
@@ -121,6 +121,157 @@ def ModelTrainHalf(dataset_path="dataset.csv"):
     print(f"Entrenamiento completado: {len(X_train_balanced)} filas")
     print("Modelo avanzado guardado como 'modelo_entrenado_avanzado.pkl'")
     
+    return model_data
+
+def ModelTrainFull(dataset_path="dataset.csv"):
+    """
+    Entrenamiento avanzado usando el 100% del dataset para entrenamiento.
+    Compatible con testModelHalf_fixed() y preprocess_new_data().
+    Incluye:
+    - Shuffling
+    - Label Encoding
+    - Feature Engineering (cuadrados e interacciones)
+    - SMOTE + Tomek
+    - Feature Selection
+    - RandomForest optimizado
+    - Cross-validation
+    - Guardado completo de metadata para test + explicabilidad
+    """
+
+    import pandas as pd
+    import numpy as np
+    import joblib
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import LabelEncoder
+    from sklearn.feature_selection import SelectFromModel
+    from sklearn.model_selection import cross_val_score, StratifiedKFold
+    from imblearn.combine import SMOTETomek
+
+    # ===============================================
+    # 1. Cargar y mezclar dataset
+    # ===============================================
+    df = pd.read_csv(dataset_path, sep=";")
+    df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+    print("Distribución inicial del target:")
+    print(df["target_variable"].value_counts(normalize=True))
+
+    # ===============================================
+    # 2. Label Encoding
+    # ===============================================
+    categorical_cols = df.select_dtypes(include=['object']).columns
+    numerical_cols = df.select_dtypes(include=[np.number]).columns
+    numerical_cols = numerical_cols.drop("target_variable", errors='ignore')
+
+    label_encoders = {}
+    for col in categorical_cols:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col].astype(str))
+        label_encoders[col] = le
+
+    # ===============================================
+    # 3. Feature Engineering
+    # ===============================================
+    # Cuadrados
+    for col in numerical_cols:
+        df[f"{col}_squared"] = df[col] ** 2
+
+    # Interacciones
+    if len(numerical_cols) >= 2:
+        for i, A in enumerate(numerical_cols):
+            for B in numerical_cols[i+1:]:
+                df[f"{A}_x_{B}"] = df[A] * df[B]
+
+    # ===============================================
+    # 4. Usar TODO el dataset para entrenamiento
+    # ===============================================
+    X_full = df.drop("target_variable", axis=1)
+    y_full = df["target_variable"]
+
+    print(f"Dataset completo para entrenamiento: {len(X_full)} muestras")
+
+    # ===============================================
+    # 5. SMOTE-Tomek (en todo el dataset)
+    # ===============================================
+    sm = SMOTETomek(random_state=42)
+    X_balanced, y_balanced = sm.fit_resample(X_full, y_full)
+
+    print("Distribución después de SMOTE-Tomek:")
+    print(pd.Series(y_balanced).value_counts(normalize=True))
+
+    # ===============================================
+    # 6. Feature Selection con RandomForest
+    # ===============================================
+    fs_model = RandomForestClassifier(
+        n_estimators=120,
+        random_state=42,
+        n_jobs=-1
+    )
+    fs_model.fit(X_balanced, y_balanced)
+
+    selector = SelectFromModel(fs_model, threshold='median', prefit=True)
+
+    X_selected = selector.transform(X_balanced)
+    selected_features = X_balanced.columns[selector.get_support()]
+
+    print(f"Características seleccionadas: {len(selected_features)}")
+
+    # ===============================================
+    # 7. Modelo final RandomForest optimizado
+    # ===============================================
+    best_model = RandomForestClassifier(
+        n_estimators=500,
+        max_depth=30,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        max_features='sqrt',
+        bootstrap=True,
+        oob_score=True,
+        class_weight='balanced_subsample',
+        random_state=42,
+        n_jobs=-1
+    )
+
+    best_model.fit(X_selected, y_balanced)
+
+    # ===============================================
+    # 8. Cross Validation en dataset completo
+    # ===============================================
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_score = cross_val_score(best_model, X_selected, y_balanced,
+                               cv=cv, scoring='accuracy', n_jobs=-1)
+
+    print(f"CV Accuracy: {cv_score.mean():.4f} (+/- {cv_score.std()*2:.4f})")
+
+    # ===============================================
+    # 9. Evaluación OOB (Out-of-Bag)
+    # ===============================================
+    if hasattr(best_model, 'oob_score_'):
+        print(f"OOB Score: {best_model.oob_score_:.4f}")
+
+    # ===============================================
+    # 10. Guardar TODO el pipeline
+    # ===============================================
+    model_data = {
+        "model": best_model,
+        "feature_selector": selector,
+        "label_encoders": label_encoders,
+        "selected_features": selected_features.tolist(),
+        "feature_names": X_balanced.columns.tolist(),
+        "cv_accuracy": cv_score.mean(),
+        "X_balanced": X_balanced,
+        "y_balanced": y_balanced,
+        "original_dataset_size": len(df),
+        "balanced_dataset_size": len(X_balanced),
+        "training_type": "full_dataset"
+    }
+
+    joblib.dump(model_data, "modelo_entrenado_full.pkl")
+
+    print(f"\nModelo entrenado correctamente con {len(X_balanced)} muestras balanceadas.")
+    print("Usando el 100% del dataset para entrenamiento.")
+    print("Guardado en: modelo_entrenado_full.pkl")
+
     return model_data
 
 # =============================================================================
@@ -349,7 +500,7 @@ def explain_local_prediction(instance_idx=0):
         contribution = feature_contributions[idx]
         print(f"  {feat_name}: {feat_value:.3f} (contribución: {contribution:.4f})")
 
-def run_complete_pipeline(dataset_path="dataset.csv"):
+def run_complete_pipeline(train_path="dataset.csv", test_path="dataset.csv", full=False):
     """Ejecutar pipeline completo: entrenamiento + test + explicabilidad"""
     
     print("=" * 60)
@@ -358,12 +509,17 @@ def run_complete_pipeline(dataset_path="dataset.csv"):
     
     # 1. Entrenamiento
     print("\n1. ENTRENANDO MODELO...")
-    model_data = ModelTrainHalf(dataset_path)
+    if full:
+        model_data = ModelTrainFull(train_path)
+    else:
+        model_data = ModelTrainHalf(train_path)
     
     # 2. Tests
     print("\n2. EJECUTANDO TESTS...")
-    testModelHalf_fixed(dataset_path)
-    testModelFull(dataset_path)
+    if full:
+        testModelFull(test_path)
+    else:
+        testModelHalf_fixed(test_path)
     
     # 3. Explicabilidad
     print("\n3. EXPLICABILIDAD DEL MODELO...")
@@ -391,9 +547,11 @@ def run_complete_pipeline(dataset_path="dataset.csv"):
 
 if __name__ == "__main__":
     # Ejecutar pipeline completo
-    run_complete_pipeline("dataset.csv")
-    
+    # run_complete_pipeline("dataset.csv", "dataset_rapido_20251116_110827.csv", full=True)
+    # O ejecutar la mitad del dataset:
+    run_complete_pipeline("dataset.csv", full=False)
     # O ejecutar componentes individualmente:
     # ModelTrainHalf("dataset.csv")
     # testModelHalf_fixed("dataset.csv")
+    
     # explain_model_global()

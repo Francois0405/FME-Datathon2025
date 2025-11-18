@@ -206,3 +206,4 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 modelo_entrenado.pkl
+modelo_entrenado_full.pkl
